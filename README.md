@@ -11,3 +11,6 @@ You also need your webserver to redirect to the correct x-nodeinfo file on the d
 # Notice
 - It may be that this is just a temporary workaround and someone else will write an ejabberd module for nodeinfo2. When this happens, this bash script will become obsolete & deprecated.
 - currently you can't have two services registered on the-federation.info, e.g. Friendica and XMPP
+
+# More Information
+You can find more information about nodeinfo2 here: https://git.feneas.org/jaywink/nodeinfo2
