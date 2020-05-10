@@ -14,3 +14,6 @@ You also need your webserver to redirect to the correct x-nodeinfo file on the d
 
 # More Information
 You can find more information about nodeinfo2 here: https://git.feneas.org/jaywink/nodeinfo2
+
+# ToDo
+- Implement message count (localPosts)
