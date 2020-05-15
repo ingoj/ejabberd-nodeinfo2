@@ -7,9 +7,11 @@ You need to have PostgreSQL as your database backend for all your vhosts. To det
 # Configuration
 The script should be pretty self-explaining. Of course you need to make some changes. 
 You also need your webserver to redirect to the correct x-nodeinfo file on the disk. The files are named $VHOST_x-nodeinfo2, maybe something like:
-'''    RewriteEngine on
-	RewriteRule   "^/.well-known/x-nodeinfo2"  "http://jabber.windfluechter.net/.well-known/hookipa.net_x-nodeinfo2"  [R,L]
-'''
+
+```apache 
+RewriteEngine on
+RewriteRule   "^/.well-known/x-nodeinfo2"  "http://jabber.windfluechter.net/.well-known/hookipa.net_x-nodeinfo2"  [R,L]
+```
 
 # Notice
 - It may be that this is just a temporary workaround and someone else will write an ejabberd module for nodeinfo2. When this happens, this bash script will become obsolete & deprecated.
