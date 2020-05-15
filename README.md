@@ -22,3 +22,4 @@ You can find more information about nodeinfo2 here: https://git.feneas.org/jaywi
 
 # ToDo
 - Implement message count (localPosts)
+- Adapt to support MySQL/MariaDB backend
