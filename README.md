@@ -16,6 +16,7 @@ RewriteRule   "^/.well-known/x-nodeinfo2"  "http://jabber.windfluechter.net/.wel
 # Notice
 - It may be that this is just a temporary workaround and someone else will write an ejabberd module for nodeinfo2. When this happens, this bash script will become obsolete & deprecated.
 - currently you can't have two services registered on the-federation.info, e.g. Friendica and XMPP
+- this script only works with global SQL configuration, not per-host config in config_hosts: section
 
 # More Information
 You can find more information about nodeinfo2 here: https://git.feneas.org/jaywink/nodeinfo2
