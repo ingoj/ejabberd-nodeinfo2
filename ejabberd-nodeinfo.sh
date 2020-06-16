@@ -1,30 +1,32 @@
 #!/bin/sh
-EJBIN=$(which ejabberdctl)
+set -f
+EJBIN=$(command -v ejabberdctl)
 EJCONF="/etc/ejabberd/ejabberd.yml"
-PSQLBIN=$(which psql)
-PSQLSERVER=$(grep ^sql_server ${EJCONF} | cut -d ":" -f2 | sed -e 's/"//g' | tr -d "[:blank:]")
-PSQLPORT=$(grep ^sql_port ${EJCONF} | cut -d ":" -f2 | tr -d "[:blank:]") 
-PSQLDB=$(grep ^sql_database ${EJCONF} | cut -d ":" -f2 | sed -e 's/"//g' | tr -d "[:blank:]")
-PSQLUSER=$(grep ^sql_username ${EJCONF} | cut -d ":" -f2 | sed -e 's/"//g' | tr -d "[:blank:]")
+PSQLBIN=$(command -v psql)
+PSQLSERVER=$(grep ^sql_server "${EJCONF}" | cut -d ":" -f2 | sed -e 's/"//g' | tr -d "[:blank:]")
+PSQLPORT=$(grep ^sql_port "${EJCONF}" | cut -d ":" -f2 | tr -d "[:blank:]") 
+PSQLDB=$(grep ^sql_database "${EJCONF}" | cut -d ":" -f2 | sed -e 's/"//g' | tr -d "[:blank:]")
+PSQLUSER=$(grep ^sql_username "${EJCONF}" | cut -d ":" -f2 | sed -e 's/"//g' | tr -d "[:blank:]")
 # password needs to be set in $HOME/.pgpass of user running this script
 # see https://www.postgresql.org/docs/12/libpq-pgpass.html for details
 
 # I don't like to have full version reported (eg.: ejabberd 20.04-1~bpo10+1), so instead
 # we are just reporting major and minor version
-VERSION=$(${EJBIN} status | grep ^ejabberd | cut -d "-" -f 1 | awk '{print $2}')
+VERSION=$("${EJBIN}" status | grep ^ejabberd | cut -d "-" -f 1 | awk '{print $2}')
 #echo ${VERSION}
 
 # iterate over all registered vhosts in ejabberd 
-for VHOST in $(${EJBIN} registered_vhosts); do 
+for VHOST in $("${EJBIN}" registered_vhosts); do 
 	#echo -n ${VHOST}
 	# get the data from postgresql database about active and total user counts
-	res=$(${PSQLBIN} -h ${PSQLSERVER} -p ${PSQLPORT} -U ${PSQLUSER} -t ${PSQLDB} -c "select concat((select count(username) from last where extract(epoch from now())-seconds::integer<86400*7 and server_host='${VHOST}')||':'||(select count(username) from last where extract(epoch from now())-seconds::integer<86400*30 and server_host='${VHOST}')||':'||(select count(username) from last where extract(epoch from now())-seconds::integer<86400*30*6 and server_host='${VHOST}')||':'||(select count(username) from users where server_host='${VHOST}'))")
-	ACTIVEWEEK=$(echo ${res} | cut -d ":" -f1 )
-	ACTIVEMONTH=$(echo ${res} | cut -d ":" -f2 )
-	ACTIVEHALFYEAR=$(echo ${res} | cut -d ":" -f3 )
-	TOTAL=$(echo ${res} | cut -d ":" -f4 )
+	res=$(${PSQLBIN} -h "${PSQLSERVER}" -p "${PSQLPORT}" -U "${PSQLUSER}" -t "${PSQLDB}" -c "select concat((select count(username) from last where extract(epoch from now())-seconds::integer<86400*7 and server_host='${VHOST}')||':'||(select count(username) from last where extract(epoch from now())-seconds::integer<86400*30 and server_host='${VHOST}')||':'||(select count(username) from last where extract(epoch from now())-seconds::integer<86400*30*6 and server_host='${VHOST}')||':'||(select count(username) from users where server_host='${VHOST}'))")
+	ACTIVEWEEK=$(echo "${res}"|cut -d ":" -f1 )
+	ACTIVEMONTH=$(echo "${res}"|cut -d ":" -f2 )
+	ACTIVEHALFYEAR=$(echo "${res}"|cut -d ":" -f3 )
+	TOTAL=$(echo "${res}"|cut -d ":" -f4 )
+	LOCALPOSTS=$(${PSQLBIN} -h "${PSQLSERVER}" -p "${PSQLPORT}" -U "${PSQLUSER}" -t "${PSQLDB}" -c "select count(*) from archive where server_host='${VHOST}'")
 	# is the registration closed or open?
-	REGRES=$(curl -s https://compliance.conversations.im/server/${VHOST}/ | awk  '/XEP-0077/,/\/div/' | head -n 3 | grep "img src" | cut -d"=" -f2 | sed -e 's/>//g' -e 's/"//g'  | cut -d"/" -f3)
+	REGRES=$(curl -s "https://compliance.conversations.im/server/${VHOST}/" | awk  '/XEP-0077/,/\/div/' | head -n 3 | grep "img src" | cut -d"=" -f2 | sed -e 's/>//g' -e 's/"//g'  | cut -d"/" -f3)
 	case "${REGRES}" in 
 		"passed.svg")
 			REGISTRATION="true"
@@ -35,7 +37,7 @@ for VHOST in $(${EJBIN} registered_vhosts); do
 	esac
 	#echo "${res} - ${REGISTRATION}"
 	# output the JSON file to a webserver path & include VHOST name
-	cat > /var/www/well-known/${VHOST}_x-nodeinfo2 << EOF
+	cat > "/var/www/well-known/${VHOST}_x-nodeinfo2" << EOF
 {
   "organization": {
     "name": "Hookipa admins",
@@ -67,7 +69,7 @@ for VHOST in $(${EJBIN} registered_vhosts); do
       "activeMonth": ${ACTIVEMONTH},
       "activeHalfyear": ${ACTIVEHALFYEAR}
     },
-    "localPosts": 1,
+    "localPosts": ${LOCALPOSTS},
     "localComments": 0
   }
 }
