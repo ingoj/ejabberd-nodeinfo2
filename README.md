@@ -21,5 +21,4 @@ RewriteRule   "^/.well-known/x-nodeinfo2"  "http://jabber.windfluechter.net/.wel
 You can find more information about nodeinfo2 here: https://git.feneas.org/jaywink/nodeinfo2
 
 # ToDo
-- Implement message count (localPosts)
 - Adapt to support MySQL/MariaDB backend
