@@ -21,19 +21,17 @@ SQLUSER=$(grep ^sql_username "${EJCONF}" | cut -d ":" -f2 | sed -e 's/"//g' | tr
 # I don't like to have full version reported (eg.: ejabberd 20.04-1~bpo10+1), so instead
 # we are just reporting major and minor version
 VERSION=$("${EJBIN}" status | grep ^ejabberd | cut -d "-" -f 1 | awk '{print $2}')
-#echo ${VERSION}
 
 # iterate over all registered vhosts in ejabberd 
 for VHOST in $("${EJBIN}" registered_vhosts); do 
-	#echo -n ${VHOST}
 	# get the data from postgresql database about active and total user counts
 	if [ "${SQLTYPE}" = "pgsql" ]; then
-		res=$(${SQLBIN} -h "${SQLSERVER}" -p "${SQLPORT}" -U "${SQLUSER}" -t "${SQLDB}" -c "select concat((select count(username) from last where extract(epoch from now())-seconds::integer<86400*7 and server_host='${VHOST}')||':'||(select count(username) from last where extract(epoch from now())-seconds::integer<86400*30 and server_host='${VHOST}')||':'||(select count(username) from last where extract(epoch from now())-seconds::integer<86400*30*6 and server_host='${VHOST}')||':'||(select count(username) from users where server_host='${VHOST}'))")
+		res=$(${SQLBIN} -h "${SQLSERVER}" -p "${SQLPORT}" -U "${SQLUSER}" -t "${SQLDB}" -c "select concat((select count(username) from last where extract(epoch from now())-seconds::integer<86400*7 and server_host='${VHOST}')||':'||(select count(username) from last where extract(epoch from now())-seconds::integer<86400*30 and server_host='${VHOST}')||':'||(select count(username) from last where extract(epoch from now())-seconds::integer<86400*30*6 and server_host='${VHOST}')||':'||(select count(username) from users where server_host='${VHOST}')||':'||(select count(*) from archive where server_host='${VHOST}'))")
 		ACTIVEWEEK=$(echo "${res}"|cut -d ":" -f1 )
 		ACTIVEMONTH=$(echo "${res}"|cut -d ":" -f2 )
 		ACTIVEHALFYEAR=$(echo "${res}"|cut -d ":" -f3 )
 		TOTAL=$(echo "${res}"|cut -d ":" -f4 )
-		LOCALPOSTS=$(${SQLBIN} -h "${SQLSERVER}" -p "${SQLPORT}" -U "${SQLUSER}" -t "${SQLDB}" -c "select count(*) from archive where server_host='${VHOST}'")
+		LOCALPOSTS=$(echo "${res}"|cut -d ":" -f5 )
 	elif [ "${SQLTYPE}" = "mysql" ]; then
 		# MySQL queries to be placed here
 		#res=$(${SQLBIN} -h "${SQLSERVER}" -p "${SQLPORT}" -U "${SQLUSER}" -t "${SQLDB}" -c "select concat((select count(username) from last where extract(epoch from now())-seconds::integer<86400*7 and server_host='${VHOST}')||':'||(select count(username) from last where extract(epoch from now())-seconds::integer<86400*30 and server_host='${VHOST}')||':'||(select count(username) from last where extract(epoch from now())-seconds::integer<86400*30*6 and server_host='${VHOST}')||':'||(select count(username) from users where server_host='${VHOST}'))")
@@ -41,7 +39,7 @@ for VHOST in $("${EJBIN}" registered_vhosts); do
 		#ACTIVEMONTH=$(echo "${res}"|cut -d ":" -f2 )
 		#ACTIVEHALFYEAR=$(echo "${res}"|cut -d ":" -f3 )
 		#TOTAL=$(echo "${res}"|cut -d ":" -f4 )
-		#LOCALPOSTS=$(${SQLBIN} -h "${SQLSERVER}" -p "${SQLPORT}" -U "${SQLUSER}" -t "${SQLDB}" -c "select count(*) from archive where server_host='${VHOST}'")
+		#LOCALPOSTS=$(echo "${res}"|cut -d ":" -f5 )
 		true
 	fi
 	# is the registration closed or open?
@@ -54,8 +52,8 @@ for VHOST in $("${EJBIN}" registered_vhosts); do
 			REGISTRATION="false"
 			;;
 	esac
-	#echo "${res} - ${REGISTRATION}"
 	# output the JSON file to a webserver path & include VHOST name
+	# replace "name" and "contact" to match your sites
 	cat > "/var/www/well-known/${VHOST}_x-nodeinfo2" << EOF
 {
   "organization": {
