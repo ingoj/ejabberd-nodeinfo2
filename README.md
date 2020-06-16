@@ -22,3 +22,22 @@ You can find more information about nodeinfo2 here: https://git.feneas.org/jaywi
 
 # ToDo
 - Adapt to support MySQL/MariaDB backend: done! But actual MySQL queries are missing... 
+Example output (reformatted for easier read): 
+```
+ejabberd=# select concat(
+(select count(username) from last where extract(epoch from now())-seconds::integer<86400*7 and server_host='VHOST')
+||':'||
+(select count(username) from last where extract(epoch from now())-seconds::integer<86400*30 and server_host='VHOST')
+||':'||
+(select count(username) from last where extract(epoch from now())-seconds::integer<86400*30*6 and server_host='VHOST')
+||':'||
+(select count(username) from users where server_host='VHOST')
+||':'||
+(select count(*) from archive where server_host='VHOST'));
+
+      concat
+-------------------
+ 10:12:15:15:17509
+(1 row)
+```
+So, the expected output is: `LastWeek:LastMonth:Last6Month:TotalUsers:LastPosts`
