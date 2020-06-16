@@ -1,12 +1,20 @@
 #!/bin/sh
-set -f
+set -fe
 EJBIN=$(command -v ejabberdctl)
 EJCONF="/etc/ejabberd/ejabberd.yml"
-PSQLBIN=$(command -v psql)
-PSQLSERVER=$(grep ^sql_server "${EJCONF}" | cut -d ":" -f2 | sed -e 's/"//g' | tr -d "[:blank:]")
-PSQLPORT=$(grep ^sql_port "${EJCONF}" | cut -d ":" -f2 | tr -d "[:blank:]") 
-PSQLDB=$(grep ^sql_database "${EJCONF}" | cut -d ":" -f2 | sed -e 's/"//g' | tr -d "[:blank:]")
-PSQLUSER=$(grep ^sql_username "${EJCONF}" | cut -d ":" -f2 | sed -e 's/"//g' | tr -d "[:blank:]")
+SQLTYPE=$(grep ^sql_type "${EJCONF}" | cut -d ":" -f2 | sed -e 's/"//g' | tr -d "[:blank:]")
+if [ "${SQLTYPE}" = "pgsql" ]; then
+	SQLBIN=$(command -v psql)
+elif [ "${SQLTYPE}" = "mysql" ]; then
+	SQLBIN=$(command -v mysql)
+else
+	echo "No supported database (pgsql/mysql) found in ${EJCONF}"
+	exit 0
+fi
+SQLSERVER=$(grep ^sql_server "${EJCONF}" | cut -d ":" -f2 | sed -e 's/"//g' | tr -d "[:blank:]")
+SQLPORT=$(grep ^sql_port "${EJCONF}" | cut -d ":" -f2 | tr -d "[:blank:]") 
+SQLDB=$(grep ^sql_database "${EJCONF}" | cut -d ":" -f2 | sed -e 's/"//g' | tr -d "[:blank:]")
+SQLUSER=$(grep ^sql_username "${EJCONF}" | cut -d ":" -f2 | sed -e 's/"//g' | tr -d "[:blank:]")
 # password needs to be set in $HOME/.pgpass of user running this script
 # see https://www.postgresql.org/docs/12/libpq-pgpass.html for details
 
@@ -19,12 +27,23 @@ VERSION=$("${EJBIN}" status | grep ^ejabberd | cut -d "-" -f 1 | awk '{print $2}
 for VHOST in $("${EJBIN}" registered_vhosts); do 
 	#echo -n ${VHOST}
 	# get the data from postgresql database about active and total user counts
-	res=$(${PSQLBIN} -h "${PSQLSERVER}" -p "${PSQLPORT}" -U "${PSQLUSER}" -t "${PSQLDB}" -c "select concat((select count(username) from last where extract(epoch from now())-seconds::integer<86400*7 and server_host='${VHOST}')||':'||(select count(username) from last where extract(epoch from now())-seconds::integer<86400*30 and server_host='${VHOST}')||':'||(select count(username) from last where extract(epoch from now())-seconds::integer<86400*30*6 and server_host='${VHOST}')||':'||(select count(username) from users where server_host='${VHOST}'))")
-	ACTIVEWEEK=$(echo "${res}"|cut -d ":" -f1 )
-	ACTIVEMONTH=$(echo "${res}"|cut -d ":" -f2 )
-	ACTIVEHALFYEAR=$(echo "${res}"|cut -d ":" -f3 )
-	TOTAL=$(echo "${res}"|cut -d ":" -f4 )
-	LOCALPOSTS=$(${PSQLBIN} -h "${PSQLSERVER}" -p "${PSQLPORT}" -U "${PSQLUSER}" -t "${PSQLDB}" -c "select count(*) from archive where server_host='${VHOST}'")
+	if [ "${SQLTYPE}" = "pgsql" ]; then
+		res=$(${SQLBIN} -h "${SQLSERVER}" -p "${SQLPORT}" -U "${SQLUSER}" -t "${SQLDB}" -c "select concat((select count(username) from last where extract(epoch from now())-seconds::integer<86400*7 and server_host='${VHOST}')||':'||(select count(username) from last where extract(epoch from now())-seconds::integer<86400*30 and server_host='${VHOST}')||':'||(select count(username) from last where extract(epoch from now())-seconds::integer<86400*30*6 and server_host='${VHOST}')||':'||(select count(username) from users where server_host='${VHOST}'))")
+		ACTIVEWEEK=$(echo "${res}"|cut -d ":" -f1 )
+		ACTIVEMONTH=$(echo "${res}"|cut -d ":" -f2 )
+		ACTIVEHALFYEAR=$(echo "${res}"|cut -d ":" -f3 )
+		TOTAL=$(echo "${res}"|cut -d ":" -f4 )
+		LOCALPOSTS=$(${SQLBIN} -h "${SQLSERVER}" -p "${SQLPORT}" -U "${SQLUSER}" -t "${SQLDB}" -c "select count(*) from archive where server_host='${VHOST}'")
+	elif [ "${SQLTYPE}" = "mysql" ]; then
+		# MySQL queries to be placed here
+		#res=$(${SQLBIN} -h "${SQLSERVER}" -p "${SQLPORT}" -U "${SQLUSER}" -t "${SQLDB}" -c "select concat((select count(username) from last where extract(epoch from now())-seconds::integer<86400*7 and server_host='${VHOST}')||':'||(select count(username) from last where extract(epoch from now())-seconds::integer<86400*30 and server_host='${VHOST}')||':'||(select count(username) from last where extract(epoch from now())-seconds::integer<86400*30*6 and server_host='${VHOST}')||':'||(select count(username) from users where server_host='${VHOST}'))")
+		#ACTIVEWEEK=$(echo "${res}"|cut -d ":" -f1 )
+		#ACTIVEMONTH=$(echo "${res}"|cut -d ":" -f2 )
+		#ACTIVEHALFYEAR=$(echo "${res}"|cut -d ":" -f3 )
+		#TOTAL=$(echo "${res}"|cut -d ":" -f4 )
+		#LOCALPOSTS=$(${SQLBIN} -h "${SQLSERVER}" -p "${SQLPORT}" -U "${SQLUSER}" -t "${SQLDB}" -c "select count(*) from archive where server_host='${VHOST}'")
+		true
+	fi
 	# is the registration closed or open?
 	REGRES=$(curl -s "https://compliance.conversations.im/server/${VHOST}/" | awk  '/XEP-0077/,/\/div/' | head -n 3 | grep "img src" | cut -d"=" -f2 | sed -e 's/>//g' -e 's/"//g'  | cut -d"/" -f3)
 	case "${REGRES}" in 
