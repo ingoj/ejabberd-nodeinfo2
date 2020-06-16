@@ -21,4 +21,4 @@ RewriteRule   "^/.well-known/x-nodeinfo2"  "http://jabber.windfluechter.net/.wel
 You can find more information about nodeinfo2 here: https://git.feneas.org/jaywink/nodeinfo2
 
 # ToDo
-- Adapt to support MySQL/MariaDB backend
+- Adapt to support MySQL/MariaDB backend: done! But actual MySQL queries are missing... 
