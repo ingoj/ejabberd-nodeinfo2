@@ -40,4 +40,4 @@ ejabberd=# select concat(
  10:12:15:15:17509
 (1 row)
 ```
-So, the expected output is: `LastWeek:LastMonth:Last6Month:TotalUsers:LastPosts`
+So, the expected output is: `ActiveWeek:ActiveMonth:ActiveHalfyear:TotalUsers:LocalPosts`
