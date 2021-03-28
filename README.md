@@ -2,7 +2,7 @@
 This script reports some statistical information in a x-nodeinfo2 JSON file for https://the-federation.info
 
 # Requirements
-You need to have PostgreSQL as your database backend for all your vhosts. To determine whether or not your domain has registration open or not, you need to have curl installed. 
+You need to have PostgreSQL as your database backend for all your vhosts and the database needs to be in new format (all domains in one database with global SQL config). To determine whether or not your domain has registration open or not, you need to have curl installed. 
 
 # Configuration
 The script should be pretty self-explaining. Of course you need to make some changes. 
